@@ -1,0 +1,39 @@
+---
+title: "me"
+author: "Alyssa Monda"
+date: "4/13/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r}
+# Load the files
+
+rich_dense_biom  <- system.file("~/Desktop/ag_1k_fecal.biom", "~/Desktop/ag_1k_fecal.biom",  package="phyloseq")
+
+rich_sparse_biom <- system.file("~/Desktop/ag_1k_fecal.biom", "rich_sparse_otu_table.biom", package="phyloseq")
+
+min_dense_biom   <- system.file("~/Desktop/ag_1k_fecal.biom", "min_dense_otu_table.biom",   package="phyloseq")
+
+min_sparse_biom  <- system.file("~/Desktop/ag_1k_fecal.biom", "min_sparse_otu_table.biom",  package="phyloseq")
+
+treefilename <- system.file("~/Desktop/ag_1k_fecal.biom", "biom-tree.phy",  package="phyloseq")
+
+refseqfilename <- system.file("~/Desktop/ag_1k_fecal.biom", "biom-refseq.fasta",  package="phyloseq")
+```
+
+```{r}
+rd <- import_biom(rich_dense_biom, treefilename, refseqfilename, parseFunction = parse_taxonomy_greengenes)
+
+rs<- import_biom(rich_sparse_biom, treefilename, refseqfilename, parseFunction = parse_taxonomy_greengenes)
+
+md<- import_biom(min_dense_biom, treefilename, refseqfilename, parseFunction = parse_taxonomy_greengenes)
+
+tf<- import_biom(min_sparse_biom, treefilename, refseqfilename, parseFunction = parse_taxonomy_greengenes)
+```
+
