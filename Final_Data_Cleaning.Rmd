@@ -302,16 +302,105 @@ Meta$Skin[Meta$Skin=="Unspecified"] <- "NA"
 Meta$Skin[Meta$Skin=="no_data"] <- "NA"
 
 #Subset data to remove children and young adults due to strong association between age and difference in gut microbiome. 
-Sub <-subset(Meta, AGE_YEARS>40)
+Meta <-subset(Meta, AGE_YEARS>40)
 
 #Make sure it worked
-summary(Sub$AGE_YEARS)
+summary(Meta$AGE_YEARS)
 
 ```
 
 
+Look for implausible values in numeric variables that need to be removed from the analysis, and observe distributions. 
+```{r}
 
+#Summart Statistics for continuous variables.  
 
+summary(Meta$Age)
+summary(Meta$BMI)
+
+#Data Visualization
+
+#Histogram for Age
+hist(Meta$Age)
+#Not normally distributed, slight skew right. Consider during analysis. 
+
+#Histogram for BMI
+hist(Meta$BMI)
+
+#Remove implausible values BMI. Remove any value over 100.Seems mistakes are all in the thousands or higher. New max is 94.48. Need to find method for what is implausible. Obese Class III is >40. Best I have found is any score 3 standard deviations from the mean.<http://apps.who.int/bmi/index.jsp?introPage=intro_3.html> I can also use BMI_CAT for classifications. 
+Meta$BMI[Meta$BMI > 100] <- NA
+
+# Re-Do Histogram for BMI and summary
+hist(Meta$BMI)
+summary(Meta$BMI)
+
+#Scatterplot BMI*AGE to observe for any trends
+plot(Meta$BMI, Meta$Age)
+
+#Sumary Statistics for categorical variables (%,SD) observed in tables made in a subsequent step. In my original workflow I performed the table one command first to inspect data by group, rather than running a summary of each indiidual within its own command line. I would like to visualize these in barplots but I was not able to get ggplot to recognize my variable names. Still troubleshooting.
+```
+
+Now I will create lists of variables to make analysis easier for the groupings of interest. 
+```{r}
+
+#Create a list of all variables of interest
+listVars <- c(Age="Age", AgeCat="AGE_CAT", Sex="Sex", Race="Race", BMI="BMI", Education="Education", Antibiotics="Antibiotics", Probiotics="Probiotics", ExFreq="ExFreq", ExLoc="ExLoc", PoolFreq="PoolFreq", Diet="Diet", Healthy="Healthy", Cancer="Cancer", Kidney="Cancer", DM="DM", Lung="Lung", CVD="CVD", AD="AD", Allergies="Allergies", AutoImm="AutoImm", ASD="ASD", IBD="IBD", IBS="IBS", Liver="Liver", Thyroid="Thyroid", Skin="Skin")
+
+#Demographic Variables for Table 1
+DemVars <- c(Age="Age", AgeCat="AGE_CAT", Sex="Sex", Race="Race", BMI="BMI", Education="Education", Healthy="Healthy")
+
+#Categorical Demograpic Variables 
+CatDemVars <- c(Sex="Sex", Race="Race", Education="Education", Healthy="Healthy")
+
+#Continuous Demograpic Variables
+NumDemVars <- c(Age="Age", BMI="BMI")
+
+#Variables to describe lifestyle
+LifeVars<- c(Antibiotics="Antibiotics", Probiotics="Probiotics", ExLoc="ExLoc", PoolFreq="PoolFreq", Diet="Diet")
+
+#Specific Illnesses of the sample
+Chronic<- c(Cancer="Cancer", Kidney="Cancer", DM="DM", Lung="Lung", CVD="CVD", AD="AD", Allergies="Allergies", AutoImm="AutoImm", ASD="ASD", IBD="IBD", IBS="IBS", Liver="Liver", Thyroid="Thyroid", Skin="Skin")
+
+#Categorical Variables
+catVars <- c(Sex="Sex", Race="Race", Education="Education", Antibiotics="Antibiotics", Probiotics="Probiotics", ExFreq="ExFreq", ExLoc="ExLoc", PoolFreq="PoolFreq", Diet="Diet", Healthy="Healthy", Cancer="Cancer", Kidney="Cancer", DM="DM", Lung="Lung", CVD="CVD", AD="AD", Allergies="Allergies", AutoImm="AutoImm", ASD="ASD", IBD="IBD", IBS="IBS", Liver="Liver", Thyroid="Thyroid", Skin="Skin")
+
+#Continuous Variables
+contVars <- c(Age="Age", BMI="BMI")
+```
+
+Now that the data is reorganized and cleaned it is time to run an initial analysis to (1) see if recoding and grouping worked and (2) look at intitial analyais of the sample data. I will do so by group of self reported Exercise Frequency. 
+
+Now that the data is reorganized and cleaned it is time to run an initial analysis to (1) see if recoding and grouping worked and (2) look at intitial analyais of the sample data. I will do so by group of self reported Exercise Frequency. 
+```{r}
+#Using "tableone" package
+
+#Figure 1
+#Table of demographics by exercise frequency  (Remove "AgeCat" for final figure, but leave in for exploratory analysis here)
+Figure1<- CreateTableOne(vars= DemVars, strata = ExFreq, data=Meta, includeNA = FALSE, test = TRUE,testApprox = chisq.test, argsApprox = list(correct = TRUE),
+  testExact = fisher.test, argsExact = list(workspace = 2 * 10^5),
+  smd = TRUE)
+Figure1
+
+#Figure 2
+#Table of demographics by exercise frequency 
+Figure2<- CreateCatTable(vars= LifeVars, strata = ExFreq, data=Meta, includeNA = FALSE, test = TRUE,testApprox = chisq.test, argsApprox = list(correct = TRUE),
+  testExact = fisher.test, argsExact = list(workspace = 2 * 10^5),
+  smd = TRUE)
+Figure2
+
+#Figure 3
+#Table of Chronic Illness Type by exercise frequency 
+Figure3<- CreateCatTable(vars= Chronic, strata = ExFreq, data=Meta, includeNA = FALSE, test = TRUE,testApprox = chisq.test, argsApprox = list(correct = TRUE),
+  testExact = fisher.test, argsExact = list(workspace = 2 * 10^5),
+  smd = TRUE)
+Figure3
+
+#Would like to know how to add a column for totals, can't figure out in tableone package, may have to be manual. Also how p-values are actually calculated in this package, what is the input for the chi^2? Also how to omit missing or NA from the analysis. 
+
+#Could not figure this out so I will do it manually in Word. :( I will also insert the tables manually using the word export for this package. It prints shorter and more organized using this function. 
+
+#Recoding of variables above did not change columns in tables for ExFreq. Haven't identified a solution for this yet. Seems to have worked for the variables in the rows. 
+```
 
 
 
