@@ -20,6 +20,23 @@ knitr::opts_chunk$set(message = FALSE)
 library(rmarkdown)
 library(knitr)
 library(N741pkg)
+library(phyloseq)
+library(dada2)
+library(ggplot2)
+library(biom)
+library(devtools)
+library(mixOmics)
+library(tidyverse)
+library(vegan)
+library(mixOmics)
+library(readxl)
+library(tableone)
+library(ReporteRs)
+library(magrittr)
+library(plyr)
+
+
+#If error in phyloseq load visit this page <https://joey711.github.io/phyloseq/install.html>
 ```
 
 ## Abstract
@@ -29,6 +46,13 @@ _TYPE IN YOUR TEXT HERE - DELETE THIS FOR FINAL REPORT: Please provide an abstra
 ## Introduction
 
 _TYPE IN YOUR TEXT HERE - DELETE THIS FOR FINAL REPORT: Please describe: the motivation and purpose of your project including your research questions and objectives. Hint: look back at what you submitted for Milestone 1._
+
+###Study Aims
+Aim 1: Characterize the alpha/beta diversity of the gut microbiome as it relates to frequency and location of exercise. 
+  H1.1- Individuals self reporting exercise performed 3-4 times/week will have increased diversity of the gut microbiome.
+  H1.2- Individuals self-reporting exercising outdoors or both indoors and outdoors will have greater diversity than those who exercise indoors ot not at all. 
+Aim 2: If a relationship exists, investigate the associations between exercise and butyrate producing taxa. 
+  H2: Individuals self-reporting exercise 3-4 times/week will have a greater presence of butyrate producing taxa (Roseburia spp., Faecalibacterium spp., and Eubacterium spp.). 
 
 ## Dataset Description and Summary
 

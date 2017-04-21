@@ -1,13 +1,327 @@
 ---
 title: "Final Project Data Processing Steps"
 author: "Alyssa Monda"
-date: "4/21/2017"
+date: "`r Sys.Date()`"
 output: html_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
+# knitr chunk options set to prevent
+# code, warnings and messages from being
+# shown in your final document
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+
+#Downloaded packages 
+library(phyloseq)
+library(dada2)
+library(ggplot2)
+library(biom)
+library(devtools)
+library(knitr)
+library(mixOmics)
+library(tidyverse)
+library(vegan)
+library(mixOmics)
+library(readxl)
+library(tableone)
+library(ReporteRs)
+library(magrittr)
+library(plyr)
+
+
+#If error in phyloseq load visit this page <https://joey711.github.io/phyloseq/install.html>
 ```
+
+##Import Meta Data
+Import Meta Data as DataFrame
+```{r}
+library(readr)
+Meta <- read_delim("~/Desktop/ag_1k_fecal.txt", 
+    "\t", escape_double = FALSE, col_types = cols(AGE_YEARS = col_number(), 
+        BMI = col_number(), `ENA-BASE-COUNT` = col_number(), 
+        HEIGHT_CM = col_number(), VIOSCREEN_FIBER = col_number(),
+        VIOSCREEN_LOW_FAT_DAIRY_SERVING = col_number(), 
+        VIOSCREEN_LYSINE = col_number(), 
+        VIOSCREEN_MANNITOL = col_number(), 
+        VIOSCREEN_SFA100 = col_double(), #capric acid
+        VIOSCREEN_SFA40 = col_double(),#SFA4:0 Butyric Acid
+        VIOSCREEN_SFA170 = col_double(), #margaric acid
+        VIOSCREEN_VEG5_DAY = col_number(), 
+        VIOSCREEN_VEGETABLE_SERVINGS = col_number(), 
+        chao1_1k = col_double()), trim_ws = TRUE)
+View(Meta)
+```
+
+##Analysis of MetaData
+It is important to clean the metadata prior to merging it with the data from the biom file. Therefore I will now recode, clean, and analyze the demographics of the sample. Before I can start I must recategorize the variables and assign values to groups I am interested in.
+
+I will also subset the data to only include individuals over the age of 40. I am using older individuals in this analysis because this is the population I will be working with for my dissertation, and i would love to be able to use this information as preliminary data. However, murine models show differences in the response to exercise based on age, showing juveline mice have increased diversity after an exercise intervention when compared to older mice after the same intervention. I would like to do a future analysis on children and teens after finishing this project. 
+
+```{r}
+
+#Recode labels and levels for current variables to clean up data
+#Age
+Meta$Age<-Meta$"AGE_YEARS"
+Age<-"AGE_YEARS"
+#Subset by age after recording at the end. 
+
+#BMI- coded as wanted check implausible values after recoding other variables
+
+#Sex 
+Meta$Sex<-Meta$"SEX"
+Meta$Sex[Meta$Sex=="male"] <- "Male"
+Meta$Sex[Meta$Sex=="female"] <- "Female"
+Meta$Sex[Meta$Sex=="other"] <- "Other"
+Meta$Sex[Meta$Sex=="Unknown"] <- "NA"
+Meta$Sex[Meta$Sex=="unspecified"] <- "NA"
+
+#Race 
+Meta$Race<- Meta$"RACE"
+Meta$Race[Meta$Race=="Caucasian"] <- "White"
+Meta$Race[Meta$Race=="African American"] <- "Black"
+Meta$Race[Meta$Race=="Hispanic"] <- "Hispanic"
+Meta$Race[Meta$Race=="Asian or Pacific Islander"] <- "Other"
+Meta$Race[Meta$Race=="Other"] <- "Other"
+Meta$Race[Meta$Race=="Unspecified"] <- "NA"
+Meta$Race[Meta$Race=="Unknown"] <- "NA"
+
+#Education 
+Education<- "LEVEL_OF_EDUCATION"
+Meta$Education<- Meta$"LEVEL_OF_EDUCATION"
+Meta$Education[Meta$Education=="Did not complete high school"] <- "< High School Degree"
+Meta$Education[Meta$Education=="High School or GED equivalent degree"] <- "High School Degree"
+Meta$Education[Meta$Education=="Some college or technical school"] <- "High School Degree"
+Meta$Education[Meta$Education=="Associate's degree"] <- "Undergraduate degree"
+Meta$Education[Meta$Education=="Bachelor's degree"] <- "Undergraduate degree"
+Meta$Education[Meta$Education=="Some graduate school or professional"] <- "Undergraduate degree"
+Meta$Education[Meta$Education=="Graduate or Professional degree"] <- "Graduate or Professional degree"
+Meta$Education[Meta$Education=="Uknown"] <- "NA"
+Meta$Education[Meta$Education=="Unspecified"] <- "NA"
+
+#Do I want to include country of birth, or economic region?
+
+#Antibiotics 
+Meta$Antibiotics<-Meta$"ANTIBIOTIC_HISTORY"
+Meta$Antibiotics[Meta$Antibiotics=="6 months"] <- "6 Months"
+Meta$Antibiotics[Meta$Antibiotics=="Uknown"] <- "> 1 year"
+Meta$Antibiotics[Meta$Antibiotics=="Uknown"] <- "NA"
+Meta$Antibiotics[Meta$Antibiotics=="Unspecified"] <- "NA"
+
+#Probiotics
+Meta$Probiotics<- Meta$"PROBIOTIC_FREQUENCY"
+Meta$Probiotics[Meta$Probiotics=="Unknown"] <- "NA"
+Meta$Probiotics[Meta$Probiotics=="Unspecified"] <- "NA"
+
+#ExFreq 
+ExFreq<- "EXERCISE_FREQUENCY"
+Meta$ExFreq <-Meta$"EXERCISE_FREQUENCY"
+Meta$ExFreq[Meta$ExFreq=="Unknown"] <- "NA"
+Meta$ExFreq[Meta$ExFreq=="Unspecified"] <- "NA"
+Meta$ExFreq[Meta$ExFreq=="unknown"] <- "NA"
+Meta$ExFreq[Meta$ExFreq=="unspecified"] <- "NA"
+
+#ExLoc 
+Meta$ExLoc<- Meta$"EXERCISE_LOCATION"
+Meta$ExLoc[Meta$ExLoc=="Depends on the season"] <- "Both"
+Meta$ExLoc[Meta$ExLoc=="Unknown"] <- "NA"
+Meta$ExLoc[Meta$ExLoc=="Unspecified"] <- "NA"
+
+#PoolFreq 
+Meta$PoolFreq<- Meta$"POOL_FREQUENCY"
+Meta$PoolFreq[Meta$PoolFreq=="Unknown"] <- "NA"
+Meta$PoolFreq[Meta$PoolFreq=="Unspecified"] <- "NA"
+
+#Diet
+Meta$Diet<- Meta$"DIET_TYPE"
+Meta$Diet[Meta$Diet=="Unknown"] <- "NA"
+Meta$Diet[Meta$Diet=="Unspecified"] <- "NA"
+
+#Healthy = No chronic Illness
+Meta$Healthy<-Meta$"SUBSET_HEALTHY"
+Meta$Healthy[Meta$Healthy=="True"] <- "Healthy"
+Meta$Healthy[Meta$Healthy=="False"] <- "Chronic Illness"
+Meta$Healthy[Meta$Healthy=="true"] <- "Healthy"
+Meta$Healthy[Meta$Healthy=="false"] <- "Chronic Illness"
+Meta$Healthy[Meta$Healthy=="Uknown"] <- "NA"
+Meta$Healthy[Meta$Healthy=="Unspecified"] <- "NA"
+
+#Recode variables for chronic illnesses to 0-Do not have 1-Dx by provider NA-unknown
+
+Meta$Cancer=Meta$"CANCER"
+Meta$Cancer[Meta$Cancer=="Diagnosed by a medical professional doctor, physician assistant"] <- "1"
+Meta$Cancer[Meta$Cancer=="Diagnosed by a medical professional (doctor, physician assistant)"] <- "1"
+Meta$Cancer[Meta$Cancer=="Diagnosed by an alternative medicine practitioner"] <- "1"
+Meta$Cancer[Meta$Cancer=="Self-diagnosed"] <- "0"
+Meta$Cancer[Meta$Cancer=="I do not have this condition"] <- "0"
+Meta$Cancer[Meta$Cancer=="Unknown"] <- "NA"
+Meta$Cancer[Meta$Cancer=="Unspecified"] <- "NA"
+Meta$Cancer[Meta$Cancer=="no_data"] <- "NA"
+
+
+Meta$Kidney=Meta$"KIDNEY_DISEASE"
+Meta$Kidney[Meta$Kidney=="Diagnosed by a medical professional doctor, physician assistant"] <- "1"
+Meta$Kidney[Meta$Kidney=="Diagnosed by a medical professional (doctor, physician assistant)"] <- "1"
+Meta$Kidney[Meta$Kidney=="Diagnosed by an alternative medicine practitioner"] <- "1"
+Meta$Kidney[Meta$Kidney=="Self-diagnosed"] <- "0"
+Meta$Kidney[Meta$Kidney=="I do not have this condition"] <- "0"
+Meta$Kidney[Meta$Kidney=="Unknown"] <- "NA"
+Meta$Kidney[Meta$Kidney=="Unspecified"] <- "NA"
+Meta$Kidney[Meta$Kidney=="no_data"] <- "NA"
+
+
+Meta$DM=Meta$"DIABETES"
+Meta$DM[Meta$DM=="Diagnosed by a medical professional doctor, physician assistant"] <- "1"
+Meta$DM[Meta$DM=="Diagnosed by a medical professional (doctor, physician assistant)"] <- "1"
+Meta$DM[Meta$DM=="Diagnosed by an alternative medicine practitioner"] <- "1"
+Meta$DM[Meta$DM=="Self-diagnosed"] <- "0"
+Meta$DM[Meta$DM=="I do not have this condition"] <- "0"
+Meta$DM[Meta$DM=="Unknown"] <- "NA"
+Meta$DM[Meta$DM=="Unspecified"] <- "NA"
+Meta$DM[Meta$DM=="no_data"] <- "NA"
+
+
+Meta$Lung=Meta$"LUNG_DISEASE"
+Meta$Lung[Meta$Lung=="Diagnosed by a medical professional doctor, physician assistant"] <- "1"
+Meta$Lung[Meta$Lung=="Diagnosed by a medical professional (doctor, physician assistant)"] <- "1"
+Meta$Lung[Meta$Lung=="Diagnosed by an alternative medicine practitioner"] <- "1"
+Meta$Lung[Meta$Lung=="Self-diagnosed"] <- "0"
+Meta$Lung[Meta$Lung=="I do not have this condition"] <- "0"
+Meta$Lung[Meta$Lung=="Unknown"] <- "NA"
+Meta$Lung[Meta$Lung=="Unspecified"] <- "NA"
+Meta$Lung[Meta$Lung=="no_data"] <- "NA"
+
+
+Meta$ASD[Meta$ASD=="Diagnosed by a medical professional doctor, physician assistant"] <- "1"
+Meta$ASD[Meta$ASD=="Diagnosed by a medical professional (doctor, physician assistant)"] <- "1"
+Meta$ASD[Meta$ASD=="Diagnosed by an alternative medicine practitioner"] <- "1"
+Meta$ASD[Meta$ASD=="Self-diagnosed"] <- "0"
+Meta$ASD[Meta$ASD=="I do not have this condition"] <- "0"
+Meta$ASD[Meta$ASD=="Unknown"] <- "NA"
+Meta$ASD[Meta$ASD=="Unspecified"] <- "NA"
+Meta$ASD[Meta$ASD=="no_data"] <- "NA"
+
+
+Meta$IBS[Meta$IBS=="Diagnosed by a medical professional doctor, physician assistant"] <- "1"
+Meta$IBS[Meta$IBS=="Diagnosed by a medical professional (doctor, physician assistant)"] <- "1"
+Meta$IBS[Meta$IBS=="Diagnosed by an alternative medicine practitioner"] <- "1"
+Meta$IBS[Meta$IBS=="Self-diagnosed"] <- "0"
+Meta$IBS[Meta$IBS=="I do not have this condition"] <- "0"
+Meta$IBS[Meta$IBS=="Unknown"] <- "NA"
+Meta$IBS[Meta$IBS=="Unspecified"] <- "NA"
+Meta$IBS[Meta$IBS=="no_data"] <- "NA"
+
+ 
+Meta$IBD[Meta$IBD=="Diagnosed by a medical professional doctor, physician assistant"] <- "1"
+Meta$IBD[Meta$IBD=="Diagnosed by a medical professional (doctor, physician assistant)"] <- "1"
+Meta$IBD[Meta$IBD=="Diagnosed by an alternative medicine practitioner"] <- "1"
+Meta$IBD[Meta$IBD=="Self-diagnosed"] <- "0"
+Meta$IBD[Meta$IBD=="I do not have this condition"] <- "0"
+Meta$IBD[Meta$IBD=="Unknown"] <- "NA"
+Meta$IBD[Meta$IBD=="Unspecified"] <- "NA"
+Meta$IBD[Meta$IBD=="no_data"] <- "NA"
+
+
+Meta$Liver=Meta$"LIVER_DISEASE"
+Meta$Liver[Meta$Liver=="Diagnosed by a medical professional doctor, physician assistant"] <- "1"
+Meta$Liver[Meta$Liver=="Diagnosed by a medical professional (doctor, physician assistant)"] <- "1"
+Meta$Liver[Meta$Liver=="Diagnosed by an alternative medicine practitioner"] <- "1"
+Meta$Liver[Meta$Liver=="Self-diagnosed"] <- "0"
+Meta$Liver[Meta$Liver=="I do not have this condition"] <- "0"
+Meta$Liver[Meta$Liver=="Unknown"] <- "NA"
+Meta$Liver[Meta$Liver=="Unspecified"] <- "NA"
+Meta$Liver[Meta$Liver=="no_data"] <- "NA"
+
+
+Meta$CVD=Meta$"CARDIOVASCULAR_DISEASE"
+Meta$CVD[Meta$CVD=="Diagnosed by a medical professional doctor, physician assistant"] <- "1"
+Meta$CVD[Meta$CVD=="Diagnosed by a medical professional (doctor, physician assistant)"] <- "1"
+Meta$CVD[Meta$CVD=="Diagnosed by an alternative medicine practitioner"] <- "1"
+Meta$CVD[Meta$CVD=="Self-diagnosed"] <- "0"
+Meta$CVD[Meta$CVD=="I do not have this condition"] <- "0"
+Meta$CVD[Meta$CVD=="Unknown"] <- "NA"
+Meta$CVD[Meta$CVD=="Unspecified"] <- "NA"
+Meta$CVD[Meta$CVD=="no_data"] <- "NA"
+
+ 
+Meta$AutoImm=Meta$"AUTOIMMUNE"
+Meta$AutoImm[Meta$AutoImm=="Diagnosed by a medical professional doctor, physician assistant"] <- "1"
+Meta$AutoImm[Meta$AutoImm=="Diagnosed by a medical professional (doctor, physician assistant)"] <- "1"
+Meta$AutoImm[Meta$AutoImm=="Diagnosed by an alternative medicine practitioner"] <- "1"
+Meta$AutoImm[Meta$AutoImm=="Self-diagnosed"] <- "0"
+Meta$AutoImm[Meta$AutoImm=="I do not have this condition"] <- "0"
+Meta$AutoImm[Meta$AutoImm=="Unknown"] <- "NA"
+Meta$AutoImm[Meta$AutoImm=="Unspecified"] <- "NA"
+Meta$AutoImm[Meta$AutoImm=="no_data"] <- "NA"
+
+
+Meta$AD=Meta$"ALZHEIMERS"
+Meta$AD[Meta$AD=="Diagnosed by a medical professional doctor, physician assistant"] <- "1"
+Meta$AD[Meta$AD=="Diagnosed by a medical professional (doctor, physician assistant)"] <- "1"
+Meta$AD[Meta$AD=="Diagnosed by an alternative medicine practitioner"] <- "1"
+Meta$AD[Meta$AD=="Self-diagnosed"] <- "0"
+Meta$AD[Meta$AD=="I do not have this condition"] <- "0"
+Meta$AD[Meta$AD=="Unknown"] <- "NA"
+Meta$AD[Meta$AD=="Unspecified"] <- "NA"
+Meta$AD[Meta$AD=="no_data"] <- "NA"
+
+
+Meta$Allergies=Meta$"SEASONAL_ALLERGIES"
+Meta$Allergies[Meta$Allergies=="Diagnosed by a medical professional doctor, physician assistant"] <- "1"
+Meta$Allergies[Meta$Allergies=="Diagnosed by a medical professional (doctor, physician assistant)"] <- "1"
+Meta$Allergies[Meta$Allergies=="Diagnosed by an alternative medicine practitioner"] <- "1"
+Meta$Allergies[Meta$Allergies=="Self-diagnosed"] <- "0"
+Meta$Allergies[Meta$Allergies=="I do not have this condition"] <- "0"
+Meta$Allergies[Meta$Allergies=="Unknown"] <- "NA"
+Meta$Allergies[Meta$Allergies=="Unspecified"] <- "NA"
+Meta$Allergies[Meta$Allergies=="no_data"] <- "NA"
+
+
+Meta$Thyroid=Meta$"THYROID"
+Meta$Thyroid[Meta$Thyroid=="Diagnosed by a medical professional doctor, physician assistant"] <- "1"
+Meta$Thyroid[Meta$Thyroid=="Diagnosed by a medical professional (doctor, physician assistant)"] <- "1"
+Meta$Thyroid[Meta$Thyroid=="Diagnosed by an alternative medicine practitioner"] <- "1"
+Meta$Thyroid[Meta$Thyroid=="Self-diagnosed"] <- "0"
+Meta$Thyroid[Meta$Thyroid=="I do not have this condition"] <- "0"
+Meta$Thyroid[Meta$Thyroid=="Unknown"] <- "NA"
+Meta$Thyroid[Meta$Thyroid=="Unspecified"] <- "NA"
+Meta$Thyroid[Meta$Thyroid=="no_data"] <- "NA"
+
+
+Meta$Skin=Meta$"SKIN_CONDITION"
+Meta$Skin[Meta$Skin=="Diagnosed by a medical professional doctor, physician assistant"] <- "1"
+Meta$Skin[Meta$Skin=="Diagnosed by a medical professional (doctor, physician assistant)"] <- "1"
+Meta$Skin[Meta$Skin=="Diagnosed by an alternative medicine practitioner"] <- "1"
+Meta$Skin[Meta$Skin=="Self-diagnosed"] <- "0"
+Meta$Skin[Meta$Skin=="I do not have this condition"] <- "0"
+Meta$Skin[Meta$Skin=="Unknown"] <- "NA"
+Meta$Skin[Meta$Skin=="Unspecified"] <- "NA"
+Meta$Skin[Meta$Skin=="no_data"] <- "NA"
+
+#Subset data to remove children and young adults due to strong association between age and difference in gut microbiome. 
+Sub <-subset(Meta, AGE_YEARS>40)
+
+#Make sure it worked
+summary(Sub$AGE_YEARS)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ## Step 1
 
