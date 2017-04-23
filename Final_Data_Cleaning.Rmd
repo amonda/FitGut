@@ -613,18 +613,16 @@ total <- median(sample_sums(ps))
 standf <- function(x, t=total) round(t * (x / sum(x)))
 pss <- transform_sample_counts(ps, standf)
 
+#pss is now down to 45 taxa and 4785 samples
 
-#################################################
-#WHY WONT THIS WORK
-# Filter out taxa with CV > 3.0
-
-pssf <- filter_taxa(pss, function(x) sd(x) / mean(x) > 3.0, TRUE)
-
-# Subset to Bacteroidetes
-
-pssfb <- subset_taxa(pssf, Phylum == "Bacteroidetes")
 ```
 
+```{r}
+#Alpha diversity of samples by exercise frequency and location in pruned subset 
+plot_richness(pss, x="ExFreq", color = "ExLoc", shape = NULL,
+               title = NULL, scales = "free_y", nrow = 1, shsi = NULL,
+             measures = c("Shannon", "Simpson"), sortby = NULL)
+```
 
 
 
