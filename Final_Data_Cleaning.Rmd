@@ -403,9 +403,91 @@ Figure3
 ```
 
 
+The following three R chunks have been used to create word document versions of the table. The tableone package seems to print out the tables much better in word than html. Unfortunately these will be inserted into the final knit by hand for aesthetic reasons. However, running the above code will also put them in the document that knits from this file. However, they are much less aesthetically pleasing. 
+```{r}
+ExFigure1 <- print(Figure1)
+
+# The script
+docx( ) %>% 
+     addFlexTable(ExFigure1 %>%
+     FlexTable(header.cell.props = cellProperties( background.color = "#003366"),
+               header.text.props = textBold( color = "white" ),
+               add.rownames = TRUE ) %>%
+               setZebraStyle( odd = "#DDDDDD", even = "#FFFFFF" ) ) %>%
+     writeDoc(file = "~/Desktop/ExFigure1.docx")
+
+```
 
 
+```{r}
+ExFigure2 <- print(Figure2)
 
+# The script
+docx( ) %>% 
+     addFlexTable(ExFigure2 %>%
+     FlexTable(header.cell.props = cellProperties( background.color = "#003366"),
+               header.text.props = textBold( color = "white" ),
+               add.rownames = TRUE ) %>%
+               setZebraStyle( odd = "#DDDDDD", even = "#FFFFFF" ) ) %>%
+     writeDoc(file = "~/Desktop/ExFigure2.docx")
+
+```
+
+```{r}
+ExFigure3 <- print(Figure3)
+
+# The script
+docx( ) %>% 
+     addFlexTable(ExFigure3 %>%
+     FlexTable(header.cell.props = cellProperties( background.color = "#003366"),
+               header.text.props = textBold( color = "white" ),
+               add.rownames = TRUE ) %>%
+               setZebraStyle( odd = "#DDDDDD", even = "#FFFFFF" ) ) %>%
+     writeDoc(file = "~/Desktop/ExFigure3.docx")
+
+```
+
+Although the pvalue is significant, there seems to be a pretty normal distribution of variable characteristics throughout the majority of the groups. However, the sample has a large skew towards a white, well educated population, which I assumed may be the case due to the nature of the project and data collection methods. Submitting your sample to American Gut requires a donation of 80-100 dollars. Due to the demographics there also seems to be a higher amount of people self-reporting routine exercise, rather than the normal distribution of exercise in the population which tends to be lower. This needs to be considered during analysis. Now that the metadata is cleaned I can upload the .biom file and merge the meta data. 
+
+
+```{r}
+##Import OTU file
+#Data originally downloaded from <ftp://ftp.microbio.me/AmericanGut/latest>
+#Make sure to pull the correct biom file to match the meta data down for analysis. 
+
+# To read in original .biom file use command below 
+file_path<- ("~/Desktop/ag_1k_fecal.biom")
+dat <- import_biom(file_path)
+
+#To fix error "input string 1 is invalid in this locale" run command "Sys.setlocale(locale="C")" in console and run command chunk again
+
+#Make Phyloseq values for separate pieces of the biom file 
+#Taxonomy
+taxonomy <- tax_table(dat)
+#OTU
+OTU_table<- otu_table(dat)
+
+#MetaData
+#Create Phyloseq object for sample data so it can be merged
+SampleData<- sample_data(Meta)
+SD<-sample_data(Meta)
+
+#Import the tree corresponding to this data ### Will Not work
+#tree<- tree
+
+#Merge OTU, Taxonomy, and metadata into one phyloseq object called "ps" that can be used for analysis
+Sample_data <- (SD)
+sam_cov <- as.data.frame(Sample_data)
+rownames(sam_cov) <- sam_cov$"#SampleID"
+sd <- sample_data(sam_cov)
+sample_names(sd) #Previous steps fix error in naming of SampleIds
+otus <- otu_table(OTU_table, taxa_are_rows = TRUE)
+sample_names(otus)
+tt <- tax_table(taxonomy)
+ps <- phyloseq(otus, sd, tt) #Step to merge OTU,Taxonomy, and metadata 
+ps #View object and make sure it has all 3 parts
+
+```
 
 
 
