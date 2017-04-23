@@ -31,6 +31,7 @@ library(tableone)
 library(ReporteRs)
 library(magrittr)
 library(plyr)
+library(RColorBrewer)
 
 
 #If error in phyloseq load visit this page <https://joey711.github.io/phyloseq/install.html>
@@ -622,6 +623,24 @@ pss <- transform_sample_counts(ps, standf)
 plot_richness(pss, x="ExFreq", color = "ExLoc", shape = NULL,
                title = NULL, scales = "free_y", nrow = 1, shsi = NULL,
              measures = c("Shannon", "Simpson"), sortby = NULL)
+```
+
+```{r}
+# Create bar plots for top 20 OTUs
+top20 <- names(sort(taxa_sums(ps), decreasing = TRUE))[1:20]
+ps.top20 <- transform_sample_counts(ps, function(otus) otus/sum(otus))
+ps.top20 <- prune_taxa(top20, ps.top20)
+plot_bar(ps.top20, x="ExFreq", fill="Rank6") #+ facet_wrap(~When, scales="free_x") 
+
+#Abundance by frequency.
+plot_bar(ps.top20, x="Rank6", y="Abundance", fill="ExFreq",
+title="Bar Plot", facet_grid=NULL) 
+
+#Abundance by location. 
+plot_bar(ps.top20, x="Rank6", y="Abundance", fill="ExLoc",
+title="Bar Plot", facet_grid=NULL) 
+
+#Colors didn't work on the bars?
 ```
 
 
