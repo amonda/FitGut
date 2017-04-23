@@ -1,19 +1,14 @@
 ---
-title: "Final Project Data Processing Steps"
+title: "Milestone_2"
 author: "Alyssa Monda"
-date: "`r Sys.Date()`"
+date: "3/28/2017"
 output: html_document
 ---
-
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
-# knitr chunk options set to prevent
-# code, warnings and messages from being
-# shown in your final document
-knitr::opts_chunk$set(echo = FALSE)
-knitr::opts_chunk$set(warning = FALSE)
-knitr::opts_chunk$set(message = FALSE)
+#To fix a locale error I keep recieving 
+Sys.setlocale(locale="C")
 
 #Downloaded packages 
 library(phyloseq)
@@ -36,6 +31,17 @@ library(plyr)
 #If error in phyloseq load visit this page <https://joey711.github.io/phyloseq/install.html>
 ```
 
+##Change in Plans
+Originally I had described using a different dataset to investigate the relationship between butyrate producing taxa (BPT) of the gut microbiome and inflammatory conditions. After beginning the data wrangling process I discovered the variables within the dataset did not match up in a way that made answering my question possible. The majority of the samples were from the oral microbiome and very few individuals had a positive value for an inflammatory disease as well as a gut sample, most of the time they only had oral samples on these individuals. While looking for a new dataset I stumbled upon the data from American Gut and realized they had 3 variables relating to physical activity. 
+Although this may seem like a significant change in plans, my purpose for investigating the aforementioned data was to assess whether a relationship existed between BPT and chronic conditions, because there is an increase in BPT seen in animal models observing exercise and the gut microbiome. Little is known about the mechanisms involved in the relationship between exercise and reduction of inflammation. I hypothesize changes in the gut microbiome as one of the possible pathways for the anti-inflammatory effects of moderate intensity, routine, exercise. I knew this task would involve investing more time into cleaning and analyzing this data, its significance to my research interests made the additional effort worth it. To my knowledge there are only 3 studies published investigating the relationship between exercise and the gut microbiome. These studies have small sample sizes, and the methods are of varying quality. With the current plan to propose a longitudinal study to characterize the gut microbiome after participation in a routine, aerobic, exercise intervention for my dissertation, the data from this study will be a wonderful addition to my future proposal.
+
+##Study Aims
+Aim 1: Characterize the alpha/beta diversity of the gut microbiome as it relates to frequency and location of exercise. 
+  H1.1- Individuals self reporting exercise performed 3-4 times/week will have increased diversity of the gut microbiome.
+  H1.2- Individuals self-reporting exercising outdoors or both indoors and outdoors will have greater diversity than those who exercise indoors ot not at all. 
+Aim 2: If a relationship exists, investigate the associations between exercise and butyrate producing taxa. 
+  H2: Individuals self-reporting exercise 3-4 times/week will have a greater presence of butyrate producing taxa (Roseburia spp., Faecalibacterium spp., and Eubacterium spp.). 
+
 ##Import Meta Data
 Import Meta Data as DataFrame
 ```{r}
@@ -53,21 +59,26 @@ Meta <- read_delim("~/Desktop/ag_1k_fecal.txt",
         VIOSCREEN_VEG5_DAY = col_number(), 
         VIOSCREEN_VEGETABLE_SERVINGS = col_number(), 
         chao1_1k = col_double()), trim_ws = TRUE)
-View(Meta)
+#View(Meta)
+
+#Import Tree File ###Not Working 
+#tree_file <-("~/Desktop/97_otus.tree")
+#treefilename = system.file("~/Desktop/97_otus.tree", "biom-tree.phy",  package="phyloseq")
+
+#What are parsing failures?
 ```
 
 ##Analysis of MetaData
-It is important to clean the metadata prior to merging it with the data from the biom file. Therefore I will now recode, clean, and analyze the demographics of the sample. Before I can start I must recategorize the variables and assign values to groups I am interested in.
+It is important to clean the metadata prior to merging it with the data from the biom file. Therefore I will now recode, clean, and analyze the demographics of the sample. Before I can start I must recategorize the variables and assign values to groups I am interested in. 
 
-I will also subset the data to only include individuals over the age of 40. I am using older individuals in this analysis because this is the population I will be working with for my dissertation, and i would love to be able to use this information as preliminary data. However, murine models show differences in the response to exercise based on age, showing juveline mice have increased diversity after an exercise intervention when compared to older mice after the same intervention. I would like to do a future analysis on children and teens after finishing this project. 
-
-```{r}
+```{r, include=FALSE}
 
 #Recode labels and levels for current variables to clean up data
 #Age
 Meta$Age<-Meta$"AGE_YEARS"
 Age<-"AGE_YEARS"
-#Subset by age after recording at the end. 
+
+##Probably need to filter out data on children from analysis**?
 
 #BMI- coded as wanted check implausible values after recoding other variables
 
@@ -78,8 +89,10 @@ Meta$Sex[Meta$Sex=="female"] <- "Female"
 Meta$Sex[Meta$Sex=="other"] <- "Other"
 Meta$Sex[Meta$Sex=="Unknown"] <- "NA"
 Meta$Sex[Meta$Sex=="unspecified"] <- "NA"
+#Meta$Sex
 
 #Race 
+#What I want: If Race="White" then Race="White", If African American then Race="African American", else="Other"
 Meta$Race<- Meta$"RACE"
 Meta$Race[Meta$Race=="Caucasian"] <- "White"
 Meta$Race[Meta$Race=="African American"] <- "Black"
@@ -88,6 +101,7 @@ Meta$Race[Meta$Race=="Asian or Pacific Islander"] <- "Other"
 Meta$Race[Meta$Race=="Other"] <- "Other"
 Meta$Race[Meta$Race=="Unspecified"] <- "NA"
 Meta$Race[Meta$Race=="Unknown"] <- "NA"
+#Meta$Race
 
 #Education 
 Education<- "LEVEL_OF_EDUCATION"
@@ -160,6 +174,7 @@ Meta$Cancer[Meta$Cancer=="I do not have this condition"] <- "0"
 Meta$Cancer[Meta$Cancer=="Unknown"] <- "NA"
 Meta$Cancer[Meta$Cancer=="Unspecified"] <- "NA"
 Meta$Cancer[Meta$Cancer=="no_data"] <- "NA"
+
 
 
 Meta$Kidney=Meta$"KIDNEY_DISEASE"
@@ -301,16 +316,9 @@ Meta$Skin[Meta$Skin=="Unknown"] <- "NA"
 Meta$Skin[Meta$Skin=="Unspecified"] <- "NA"
 Meta$Skin[Meta$Skin=="no_data"] <- "NA"
 
-#Subset data to remove children and young adults due to strong association between age and difference in gut microbiome. 
-Meta <-subset(Meta, AGE_YEARS>40)
-
-#Make sure it worked
-summary(Meta$AGE_YEARS)
-
 ```
 
-
-Look for implausible values in numeric variables that need to be removed from the analysis, and observe distributions. 
+Look for implausible values in numeric vasriables that need to be removed from the analysis, and observe distributions. 
 ```{r}
 
 #Summart Statistics for continuous variables.  
@@ -322,7 +330,7 @@ summary(Meta$BMI)
 
 #Histogram for Age
 hist(Meta$Age)
-#Not normally distributed, slight skew right. Consider during analysis. 
+#Should probably remove kids from the analysis but I'm not sure how this would then affect the merge to the .biom file. Ask about this!*
 
 #Histogram for BMI
 hist(Meta$BMI)
@@ -330,9 +338,8 @@ hist(Meta$BMI)
 #Remove implausible values BMI. Remove any value over 100.Seems mistakes are all in the thousands or higher. New max is 94.48. Need to find method for what is implausible. Obese Class III is >40. Best I have found is any score 3 standard deviations from the mean.<http://apps.who.int/bmi/index.jsp?introPage=intro_3.html> I can also use BMI_CAT for classifications. 
 Meta$BMI[Meta$BMI > 100] <- NA
 
-# Re-Do Histogram for BMI and summary
+# Re-Do Histogram for BMI
 hist(Meta$BMI)
-summary(Meta$BMI)
 
 #Scatterplot BMI*AGE to observe for any trends
 plot(Meta$BMI, Meta$Age)
@@ -369,8 +376,6 @@ contVars <- c(Age="Age", BMI="BMI")
 ```
 
 Now that the data is reorganized and cleaned it is time to run an initial analysis to (1) see if recoding and grouping worked and (2) look at intitial analyais of the sample data. I will do so by group of self reported Exercise Frequency. 
-
-Now that the data is reorganized and cleaned it is time to run an initial analysis to (1) see if recoding and grouping worked and (2) look at intitial analyais of the sample data. I will do so by group of self reported Exercise Frequency. 
 ```{r}
 #Using "tableone" package
 
@@ -382,29 +387,26 @@ Figure1<- CreateTableOne(vars= DemVars, strata = ExFreq, data=Meta, includeNA = 
 Figure1
 
 #Figure 2
-#Table of demographics by exercise frequency 
+#Table of lifestyle characteristics by exercise frequency 
 Figure2<- CreateCatTable(vars= LifeVars, strata = ExFreq, data=Meta, includeNA = FALSE, test = TRUE,testApprox = chisq.test, argsApprox = list(correct = TRUE),
   testExact = fisher.test, argsExact = list(workspace = 2 * 10^5),
   smd = TRUE)
-Figure2
+#Figure2
 
 #Figure 3
 #Table of Chronic Illness Type by exercise frequency 
 Figure3<- CreateCatTable(vars= Chronic, strata = ExFreq, data=Meta, includeNA = FALSE, test = TRUE,testApprox = chisq.test, argsApprox = list(correct = TRUE),
   testExact = fisher.test, argsExact = list(workspace = 2 * 10^5),
   smd = TRUE)
-Figure3
+#Figure3
 
 #Would like to know how to add a column for totals, can't figure out in tableone package, may have to be manual. Also how p-values are actually calculated in this package, what is the input for the chi^2? Also how to omit missing or NA from the analysis. 
-
-#Could not figure this out so I will do it manually in Word. :( I will also insert the tables manually using the word export for this package. It prints shorter and more organized using this function. 
 
 #Recoding of variables above did not change columns in tables for ExFreq. Haven't identified a solution for this yet. Seems to have worked for the variables in the rows. 
 ```
 
-
-The following three R chunks have been used to create word document versions of the table. The tableone package seems to print out the tables much better in word than html. Unfortunately these will be inserted into the final knit by hand for aesthetic reasons. However, running the above code will also put them in the document that knits from this file. However, they are much less aesthetically pleasing. 
-```{r}
+If I wanted to export a figure to Microsoft Word for further editing I would run the following code. 
+```{r, eval=FALSE, include=FALSE}
 ExFigure1 <- print(Figure1)
 
 # The script
@@ -418,40 +420,11 @@ docx( ) %>%
 
 ```
 
+Although the pvalue is significant, there seems to be a pretty normal distribution of variable characteristics throughout the majority of the groups. However, the sample has a large skew towards a white, well educated population, which I assumed may be the case due to the nature of the project and data collection methods. Submitting your sample to American Gut requires a donation of 80-100 dollars. Due to the demographics there also seems to be a higher amount of people self-reporting routine exercise, rather than the normal distribution of exercise in the population which tends to be lower. This needs to be considered during analysis. 
 
-```{r}
-ExFigure2 <- print(Figure2)
-
-# The script
-docx( ) %>% 
-     addFlexTable(ExFigure2 %>%
-     FlexTable(header.cell.props = cellProperties( background.color = "#003366"),
-               header.text.props = textBold( color = "white" ),
-               add.rownames = TRUE ) %>%
-               setZebraStyle( odd = "#DDDDDD", even = "#FFFFFF" ) ) %>%
-     writeDoc(file = "~/Desktop/ExFigure2.docx")
-
-```
-
-```{r}
-ExFigure3 <- print(Figure3)
-
-# The script
-docx( ) %>% 
-     addFlexTable(ExFigure3 %>%
-     FlexTable(header.cell.props = cellProperties( background.color = "#003366"),
-               header.text.props = textBold( color = "white" ),
-               add.rownames = TRUE ) %>%
-               setZebraStyle( odd = "#DDDDDD", even = "#FFFFFF" ) ) %>%
-     writeDoc(file = "~/Desktop/ExFigure3.docx")
-
-```
-
-Although the pvalue is significant, there seems to be a pretty normal distribution of variable characteristics throughout the majority of the groups. However, the sample has a large skew towards a white, well educated population, which I assumed may be the case due to the nature of the project and data collection methods. Submitting your sample to American Gut requires a donation of 80-100 dollars. Due to the demographics there also seems to be a higher amount of people self-reporting routine exercise, rather than the normal distribution of exercise in the population which tends to be lower. This needs to be considered during analysis. Now that the metadata is cleaned I can upload the .biom file and merge the meta data. 
-
-
-```{r}
 ##Import OTU file
+Now that the metadata is cleaned I can upload the .biom file and merge the meta data. 
+```{r, include=FALSE}
 #Data originally downloaded from <ftp://ftp.microbio.me/AmericanGut/latest>
 #Make sure to pull the correct biom file to match the meta data down for analysis. 
 
@@ -491,11 +464,14 @@ ps #View object and make sure it has all 3 parts
 
 
 ##Cleaning the OTU table 
-First it is important to observe a basic description of the OTU. 
+Unfortunately, the workflows I had been following were using datasets already cleaned and installed in R packages. I learned Monday that will real data there was a need to clean the OTU table prior to running analysis. I was excited to find this new workflow and excited to run it. However, the commands written in the Dan Knight workflow no longer work. So I am back to square one tring to create a dataframe from my OTU table. Once this is done I will pull out genus level taxa and remove any OTUs of 0. Then distributions of the butyrate producing taxa and commonly abundant species like Prevotella and Firmicutes will be assessed to look at distributions. Parametric and non-parametric tests will then be run to further analyze the data, look for confounders, and fit possible models. Then I will have a better idea for what variables to use in the plots listed below. 
+
+##Microbiome Analysis
+Time to start the fun part! To begin, I will perform a few statistical analysis to investigate the data. 
 ```{r}
-#Summary of OTU
 ntaxa(ps)
 rank_names(ps)
+#sample_variables(ps)
 
 
 #Summarize sequencing depths 
@@ -504,55 +480,108 @@ sdt = data.frame(as(sample_data(ps), "data.frame"),
 setNames("rn", "SampleID")
 pSeqDepth = ggplot(sdt, aes(TotalReads)) + geom_histogram() + ggtitle("Sequencing Depth")
 pSeqDepth
-
-#1000 Reads total
 ```
 
-Explore the distribution of taxa across the dataset. There are two obvious measures to consider right away: (1) prevalence - the number of samples in which a taxa appears, and (2) total counts - the total number (or proportion) of observations of a taxa across all samples.
+Filtering rare taxa is usually a necessary step in this type of data. We will actually perform the filtering elsewhere. For now, just explore the distribution of taxa across the dataset. There are two obvious measures to consider right away: (1) prevalence - the number of samples in which a taxa appears, and (2) total counts - the total number (or proportion) of observations of a taxa across all samples.
 
 ```{r}
-
-#Total Counts
 tdt = data.frame(tax_table(ps),
                  TotalCounts = taxa_sums(ps),
                  OTU = taxa_names(ps))
 ggplot(tdt, aes(TotalCounts)) + 
   geom_histogram() + 
   ggtitle("Histogram of Total Counts")
-
-##Seems like an odd number of counts.... doublecheck.
 ```
+
+Again I was stuck here due to old commands. Further analysis of counts and removal of "bad reads" still needs to be done. At this point I will merge the meta data by matching sample IDs that remain. At that point the plots can be made. 
+
+
+###Plots
+Now I will run a few investigatory plots to look at the sample data. 
+
+Figure 4:: Richness by Exercise Frequency (Alpha diversity)
+```{r}
+plot_richness(ps, x="ExFreq", color = "ExLoc", shape = NULL,
+               title = NULL, scales = "free_y", nrow = 1, shsi = NULL,
+             measures = c("Shannon", "Simpson"), sortby = NULL)
+#Looked at many different combos of x and color. Not sure which better represents data. They all look essentially the same. Need more info on interpretation and creation of these plots to know what variable to use.
+```
+
+General ordination plot (Need more info on which method to use for this type of plot)
+```{r}
+#Command for plot_ordination says to run this command prior to running the command
+#Need to figure out which method is most appropriate to use
+#Ordination<- ordinate(ps, method = "NMDS", distance = "bray", formula = NULL)
+
+#Ordinaton plot
+#plot_ordination(ps, Ordination, type = "Species", axes = 1:2,
+  #color ="Ex_Freq", shape = NULL, label = NULL, title = NULL,
+  #justDF = FALSE)
+
+#Previous method crashed R, try code from Dr. Hertzberg's repo
+
+# Ordinate with Bray-Curtis (This method crashed R too)
+#ord.nmds.bray <- ordinate(ps, method = "NMDS", distance = "bray")
+#plot_ordination(ps, or.nmds.bray, color = "ExFreq", title = "Bray NMDS")
+
+```
+
+Barplot 
+```{r}
+# Create bar plots for top 20 OTUs
+top20 <- names(sort(taxa_sums(ps), decreasing = TRUE))[1:20]
+ps.top20 <- transform_sample_counts(ps, function(otus) otus/sum(otus))
+ps.top20 <- prune_taxa(top20, ps.top20)
+plot_bar(ps.top20, x="ExFreq", fill="Rank5") #+ facet_wrap(~When, scales="free_x") <-From Hertzberg's code
+
+#Abundance by frequency.
+plot_bar(ps.top20, x="Rank5", y="Abundance", fill="ExFreq",
+title="Bar Plot", facet_grid=NULL) 
+
+#Abundance by location. 
+plot_bar(ps.top20, x="Rank5", y="Abundance", fill="ExLoc",
+title="Bar Plot", facet_grid=NULL) 
+
+#Colors didn't work on the bars?
+```
+
+Heatmap
 
 ```{r}
-#Distribution of taxa
+#Create a heatmap in ggplot using previously made data frame using "psmelt"" command
+#ggplot(meltps, aes(x = EXERCISE_FREQUENCY, 
+                #y = OTU, 
+                #fill = Abundance)) 
 
-
+#Hetmap using phyloseq
+#plot_heatmap(ps.top20, method = "NMDS", distance = "euclidean",
+  #sample.label = "ExFreq", taxa.label = "Rank 5", na.value="white", #trans = log_trans(4),
+  #max.label = 250, title = NULL, sample.order = NULL, taxa.order = NULL,
+ # first.sample = NULL, first.taxa = NULL)
 ```
 
+Figure 6: Beta Diversity By Exercise Frequency
+Principle Component Analysis to be completed at a future date 
+
+Figure 7: Beta Diversity By Exercise Location
+Principle Component Analysis to be completed at a future date 
 
 
+##Preliminary Synthesis/Discussion of Results
+At this point my data is not clean enough, nor do I know enough about plot analysis to draw any conclusions. It seems abundance may follow the same U shape as other biomarkers when compared to exercise. I am excited to see if this relationship holds true. 
 
 
+##Ancillary Questions
+-How do the skewed demographics affect the data? This group is mostly cacuasian and has at least a Bachelor's degreee or has attended graduate school. 
+-Should children be removed from the analysis? Do children/teens have a different pattern in diversity when exercise groups are compared? Mouse models seem to indicate there may be a difference.
+-Would including birth method/ method of feeding received as an infant change any of the results?
+-I want to look at diversity and frequency of swimming in a pool. 
+
+##References
+<https://github.com/JulianneA/N741_Milestone1/blob/master/Milestone2.Rmd>
+Bressa, C., Bailén-Andrino, M., Pérez-Santiago, J., González-Soltero, R., Pérez, M., Montalvo-Lominchar, M. G., ... & Larrosa, M. (2017). Differences in gut microbiota profile between women with active lifestyle and sedentary women. PloS one, 12(2), e0171352.
+Matsumoto, M., Inoue, R., Tsukahara, T., Ushida, K., Chiji, H., Matsubara, N., & Hara, H. (2008). Voluntary running exercise alters microbiota composition and increases n-butyrate concentration in the rat cecum. Bioscience, biotechnology, and biochemistry, 72(2), 572-576. doi: 10.1271/bbb.70474
 
 
-
-
-## Step 1
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
-```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+##GitHub Repository
+Ther RMarkdown file used to create this document can be found in the repositor at <https://github.com/amonda/American-Gut>. The name of the file is "Milestone2.Rmd".
