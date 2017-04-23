@@ -497,6 +497,16 @@ First it is important to observe a basic description of the OTU.
 #Summary of OTU
 ntaxa(ps)
 rank_names(ps)
+nsamples(ps)
+sample_names(ps)[1:5]
+otu_table(ps)[1:5, 1:5]
+tax_table(ps)[1:5, 1:4]
+taxa_names(ps)[1:10]
+myTaxa <- names(sort(taxa_sums(ps), decreasing = TRUE)[1:10])
+ex1 <- prune_taxa(myTaxa, ps)
+#No  tree in files online so the commands below will not run at the moment
+#plot(phy_tree(ex1), show.node.label = TRUE)
+#plot_tree(ex1, color = "SampleType", label.tips = "Rank6", ladderize = "left", justify = "left", size = "Abundance")
 
 
 #Summarize sequencing depths 
@@ -525,16 +535,99 @@ ggplot(tdt, aes(TotalCounts)) +
 ```
 
 ```{r}
-#Distribution of taxa
+#Prune Taxa 
+ps <- prune_taxa(taxa_sums(ps) > 0, ps)
+ps
+```
 
 
+```{r}
+# Look at top 10 most abundant OTUs
+
+OTUnames10 <- names(sort(taxa_sums(ps), TRUE)[1:10])
+PS10 <- prune_taxa(OTUnames10, ps)
+Gut_samples <- sample_names(subset(sample_data(ps)))
+print(Gut_samples)
+otu_table(PS10)[, Gut_samples]
+rowSums(otu_table(PS10)[, Gut_samples])
+otu_table(mPS10)
+
+```
+
+
+```{r}
+#Alpha diversity of samples by exercise frequency and location
+plot_richness(ps, x="ExFreq", color = "ExLoc", shape = NULL,
+               title = NULL, scales = "free_y", nrow = 1, shsi = NULL,
+             measures = c("Shannon", "Simpson"), sortby = NULL)
+```
+```{r}
+# alpha diversity of 10 most abundant OTUs
+plot_richness(PS10, x="ExFreq", color = "ExLoc", shape = NULL,
+               title = NULL, scales = "free_y", nrow = 1, shsi = NULL,
+             measures = c("Shannon", "Simpson"), sortby = NULL)
 ```
 
 ```{r}
-#Prune Taxa 
-
-
+#Alpha diversity of samples by exercise frequency and diet
+plot_richness(ps, x="ExFreq", color = "Diet", shape = NULL,
+               title = NULL, scales = "free_y", nrow = 1, shsi = NULL,
+             measures = c("Shannon", "Simpson"), sortby = NULL)
 ```
+
+```{r}
+#Alpha diversity of samples by exercise frequency and BMI
+plot_richness(ps, x="ExFreq", color = "BMI", shape = NULL,
+               title = NULL, scales = "free_y", nrow = 1, shsi = NULL,
+             measures = c("Shannon", "Simpson"), sortby = NULL)
+```
+
+```{r}
+#Alpha diversity of samples by exercise frequency and 
+plot_richness(ps, x="ExFreq", color = "", shape = NULL,
+               title = NULL, scales = "free_y", nrow = 1, shsi = NULL,
+             measures = c("Shannon", "Simpson"), sortby = NULL)
+```
+
+```{r}
+# Create the object with the relative abundance data
+
+psr <- transform_sample_counts(ps, function(x) x / sum(x))
+psfr <- filter_taxa(psr, function(x) mean(x) > 1e-5, TRUE)
+
+ps
+psr
+psfr
+
+#Doing this decreased taxa from 9592 to 2409 in the final psfr subset 
+```
+
+```{r}
+# Final preprocess: filter out taxa not see more than 3 times in at least 20% of samples
+
+ps <- filter_taxa(ps, function(x) sum(x > 3) > (0.2*length(x)), TRUE)
+
+# Standardize abundances to median sequencing depth
+
+total <- median(sample_sums(ps))
+standf <- function(x, t=total) round(t * (x / sum(x)))
+pss <- transform_sample_counts(ps, standf)
+
+
+#################################################
+#WHY WONT THIS WORK
+# Filter out taxa with CV > 3.0
+
+pssf <- filter_taxa(pss, function(x) sd(x) / mean(x) > 3.0, TRUE)
+
+# Subset to Bacteroidetes
+
+pssfb <- subset_taxa(pssf, Phylum == "Bacteroidetes")
+```
+
+
+
+
 
 
 ##Bivariate Analysis
