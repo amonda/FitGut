@@ -346,6 +346,7 @@ Now I will create lists of variables to make analysis easier for the groupings o
 #Create a list of all variables of interest
 listVars <- c(Age="Age", AgeCat="AGE_CAT", Sex="Sex", Race="Race", BMI="BMI", Education="Education", Antibiotics="Antibiotics", Probiotics="Probiotics", ExFreq="ExFreq", ExLoc="ExLoc", PoolFreq="PoolFreq", Diet="Diet", Healthy="Healthy", Cancer="Cancer", Kidney="Cancer", DM="DM", Lung="Lung", CVD="CVD", AD="AD", Allergies="Allergies", AutoImm="AutoImm", ASD="ASD", IBD="IBD", IBS="IBS", Liver="Liver", Thyroid="Thyroid", Skin="Skin")
 
+
 #Demographic Variables for Table 1
 DemVars <- c(Age="Age", AgeCat="AGE_CAT", Sex="Sex", Race="Race", BMI="BMI", Education="Education", Healthy="Healthy")
 
@@ -530,7 +531,24 @@ ggplot(tdt, aes(TotalCounts)) +
 ```
 
 
+##Bivariate Analysis
+```{r}
+#Look for multicolinearity 
 
+
+```
+
+
+
+##Models
+
+
+
+##Alpha Diversity
+
+
+
+##Beta Diversity
 
 
 
