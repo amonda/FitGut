@@ -530,6 +530,12 @@ ggplot(tdt, aes(TotalCounts)) +
 
 ```
 
+```{r}
+#Prune Taxa 
+
+
+```
+
 
 ##Bivariate Analysis
 ```{r}
