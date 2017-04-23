@@ -619,7 +619,7 @@ pss <- transform_sample_counts(ps, standf)
 ```
 
 ```{r}
-#Alpha diversity of samples by exercise frequency and location in pruned subset 
+#Alpha diversity of samples by exercise frequency and location in pruned/standardized subset. Is it different?
 plot_richness(pss, x="ExFreq", color = "ExLoc", shape = NULL,
                title = NULL, scales = "free_y", nrow = 1, shsi = NULL,
              measures = c("Shannon", "Simpson"), sortby = NULL)
@@ -641,6 +641,16 @@ plot_bar(ps.top20, x="Rank6", y="Abundance", fill="ExLoc",
 title="Bar Plot", facet_grid=NULL) 
 
 #Colors didn't work on the bars?
+```
+```{r}
+#melt ps object in order to create a heatmap
+melt <- psmelt(ps)
+
+#heat map---- Only one color....?
+ggplot(melt, aes(x=ExFreq,
+                y=OTU,
+                fill=Abundance)) +
+  geom_raster()
 ```
 
 
