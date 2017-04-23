@@ -648,7 +648,7 @@ melt <- psmelt(ps)
 
 #heat map---- Only one color....?
 ggplot(melt, aes(x=ExFreq,
-                y=OTU,
+                y=Rank6,
                 fill=Abundance)) +
   geom_raster()
 ```
