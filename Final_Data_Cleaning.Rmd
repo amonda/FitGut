@@ -475,7 +475,7 @@ SampleData<- sample_data(Meta)
 SD<-sample_data(Meta)
 
 #Import the tree corresponding to this data ### Will Not work
-#tree<- tree
+tree<-read_tree_greengenes("~/Desktop/97_otus.tree")
 
 #Merge OTU, Taxonomy, and metadata into one phyloseq object called "ps" that can be used for analysis
 Sample_data <- (SD)
@@ -486,7 +486,7 @@ sample_names(sd) #Previous steps fix error in naming of SampleIds
 otus <- otu_table(OTU_table, taxa_are_rows = TRUE)
 sample_names(otus)
 tt <- tax_table(taxonomy)
-ps <- phyloseq(otus, sd, tt) #Step to merge OTU,Taxonomy, and metadata 
+ps <- phyloseq(otus, sd, tt,tree) #Step to merge OTU,Taxonomy, and metadata 
 ps #View object and make sure it has all 3 parts
 
 ```
@@ -505,9 +505,11 @@ tax_table(ps)[1:5, 1:4]
 taxa_names(ps)[1:10]
 myTaxa <- names(sort(taxa_sums(ps), decreasing = TRUE)[1:10])
 ex1 <- prune_taxa(myTaxa, ps)
-#No  tree in files online so the commands below will not run at the moment
-#plot(phy_tree(ex1), show.node.label = TRUE)
-#plot_tree(ex1, color = "SampleType", label.tips = "Rank6", ladderize = "left", justify = "left", size = "Abundance")
+plot(phy_tree(ex1), show.node.label = TRUE)
+plot_tree(ex1, color = "ExFreq", label.tips = "Rank6")
+plot_tree(ex1, color = "ExFreq", label.tips = "Rank7")
+plot_tree(ex1, color = "ExLoc", label.tips = "Rank6")
+plot_tree(ex1, color = "ExLoc", label.tips = "Rank7")
 
 
 #Summarize sequencing depths 
@@ -584,13 +586,6 @@ plot_richness(ps, x="ExFreq", color = "BMI", shape = NULL,
 ```
 
 ```{r}
-#Alpha diversity of samples by exercise frequency and 
-plot_richness(ps, x="ExFreq", color = "", shape = NULL,
-               title = NULL, scales = "free_y", nrow = 1, shsi = NULL,
-             measures = c("Shannon", "Simpson"), sortby = NULL)
-```
-
-```{r}
 # Create the object with the relative abundance data
 
 psr <- transform_sample_counts(ps, function(x) x / sum(x))
@@ -640,10 +635,10 @@ title="Bar Plot", facet_grid=NULL)
 plot_bar(ps.top20, x="Rank6", y="Abundance", fill="ExLoc",
 title="Bar Plot", facet_grid=NULL) 
 
-#Colors didn't work on the bars?
+#Colors didn't work on the bars or in heatmap and I can't figure out why?
 ```
 ```{r}
-#melt ps object in order to create a heatmap
+#melt ps object in order to create a heatmap to look at inital data
 melt <- psmelt(ps)
 
 #heat map---- Only one color....?
@@ -653,6 +648,49 @@ ggplot(melt, aes(x=ExFreq,
   geom_raster()
 ```
 
+
+```{r}
+#Look at tree to visualize taxa breakdown in subset
+plot_tree(pss, color = "ExFreq", label.tips = "Rank6")
+
+
+# Eliminate samples whose total reads are less than 20
+
+GP.ch1 <- prune_samples(sample_sums(pss) >= 20, pss)
+
+GP.ch1
+plot_tree(GP.ch1)
+
+# Merge first 5 OTUSs in Chlamydiae-only dataset
+
+GP.ch1.merged <- merge_taxa(GP.ch1, taxa_names(GP.ch1)[1:5])
+```
+
+```{r}
+# Final preprocess: filter out taxa not see more than 3 times in at least
+# 20% of samples
+
+PS <- filter_taxa(ps, function(x) sum(x > 3) > (0.2*length(x)), TRUE)
+
+
+# Standardize abundances to median sequencing depth
+
+total <- median(sample_sums(PS))
+standf <- function(x, t=total) round(t * (x / sum(x)))
+gps <- transform_sample_counts(PS, standf)
+
+# Filter out taxa with CV > 3.0
+
+gpsf <- filter_taxa(PS, function(x) sd(x) / mean(x) > 3.0, TRUE)
+
+```
+
+
+```{r}
+#Look at available distance methods
+dist_methods <- unlist(distanceMethodList)
+print(dist_methods)
+```
 
 
 
