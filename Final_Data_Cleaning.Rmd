@@ -619,6 +619,26 @@ plot_richness(pss, x="ExFreq", color = "ExLoc", shape = NULL,
                title = NULL, scales = "free_y", nrow = 1, shsi = NULL,
              measures = c("Shannon", "Simpson"), sortby = NULL)
 ```
+```{r}
+#Alpha diversity of samples by exercise frequency and location in pruned/standardized subset. Is it different?
+plot_richness(pss, x="ExFreq", color = "ExLoc", shape = "Probiotics",
+               title = NULL, scales = "free_y", nrow = 1, shsi = NULL,
+             measures = c("Shannon", "Simpson"), sortby = NULL)
+```
+```{r}
+#Alpha diversity of samples by exercise frequency and location in pruned/standardized subset. Is it different?
+plot_richness(pss, x="ExFreq", color = "ExLoc", shape = "Diet",
+               title = NULL, scales = "free_y", nrow = 1, shsi = NULL,
+             measures = c("Shannon", "Simpson"), sortby = NULL)
+```
+```{r}
+#Alpha diversity of samples by exercise frequency and location in pruned/standardized subset. Is it different?
+plot_richness(pss, x="Diet", color = "ExFreq", shape = "ExLoc",
+               title = NULL, scales = "free_y", nrow = 1, shsi = NULL,
+             measures = c("Shannon", "Simpson"), sortby = NULL)
+```
+
+
 
 ```{r}
 # Create bar plots for top 20 OTUs
@@ -635,6 +655,11 @@ title="Bar Plot", facet_grid=NULL)
 plot_bar(ps.top20, x="Rank6", y="Abundance", fill="ExLoc",
 title="Bar Plot", facet_grid=NULL) 
 
+#ExFreq by phylum. 
+plot_bar(ps.top20, x="ExFreq", y="Abundance", fill="Rank2",
+title="Bar Plot", facet_grid=NULL) 
+
+
 #Colors didn't work on the bars or in heatmap and I can't figure out why?
 ```
 
@@ -646,8 +671,9 @@ melt <- psmelt(ps)
 #heat map---- Only one color....?
 ggplot(melt, aes(x=ExFreq,
                 y=Rank6,
-                fill=Abundance)) +
+                fill=Abundance , na.value="white")) +
   geom_raster()
+
 ```
 
 
@@ -669,35 +695,44 @@ GP.ch1.merged <- merge_taxa(GP.ch1, taxa_names(GP.ch1)[1:5])
 ```
 
 ```{r}
-# Final preprocess: filter out taxa not see more than 3 times in at least
-# 20% of samples
+# Final preprocess
+# Remove OTUs that don't appear more than 5 times in more than 20% the samples
 
-PS <- filter_taxa(ps, function(x) sum(x > 3) > (0.2*length(x)), TRUE)
+PS <- ps
+wh0 <- genefilter_sample(PS, filterfun_sample(function(x) x>5), A = 0.2*nsamples(PS))
+PS1 <- prune_taxa(wh0, PS)
+
+# Transform to an even sampling depth
+
+PS1 <- transform_sample_counts(PS1, function(x) 1e6 * x/sum(x))
+#Reduced to 35 taxa
 
 
 # Standardize abundances to median sequencing depth
 
-total <- median(sample_sums(PS))
-standf <- function(x, t=total) round(t * (x / sum(x)))
-gps <- transform_sample_counts(PS, standf)
+#total <- median(sample_sums(PS))
+#standf <- function(x, t=total) round(t * (x / sum(x)))
+#gps <- transform_sample_counts(PS, standf)
 
 # Filter out taxa with CV > 3.0
 
-gpsf <- filter_taxa(PS, function(x) sd(x) / mean(x) > 3.0, TRUE)
+#gpsf <- filter_taxa(PS, function(x) sd(x) / mean(x) > 3.0, TRUE)
 
 ```
 
-##Gap Statistics
+## Distance Functions and Gap Statistics
 
-```{r}
+Unfortunately I could not get these commands to run without crashing R after several hours of trying. I'm unsure if it was a coding error or not having enough computing power. There was never an error message that appeared. It would simply try running for several hours and then the R program would "fail", and i would have to restart the session and try to run the code again. 
+
+```{r, eval=FALSE, include=FALSE}
 library(cluster)
 #First ordination
-exord <- ordinate(pss, method = "MDS", distance = "jsd")
+exord <- ordinate(PS1, method = "MDS", distance = "jsd")
 
 
 ```
 
-```{r}
+```{r, eval=FALSE, include=FALSE}
 # Compute gap statistic
 
 paml = function(x, k){list(cluster=pam(x,k, cluster.only = TRUE))}
@@ -707,7 +742,7 @@ gskmn
 ```
 
 Plot the results. 
-```{r}
+```{r, eval=FALSE, include=FALSE}
 # Define plot method
 
 plot_glusgap <- function(clusgap, title="Gap Statistic calculation results"){
@@ -738,7 +773,7 @@ gap_statistic_ordination <- function(ord, FUNcluster, type="sites", K.max=6, axe
 ```
 
 
-```{r}
+```{r, eval=FALSE, include=FALSE}
 # Make the plot
 
 gs <- gap_statistic_ordination(exord, "paml", B=50, verbose = FALSE)
@@ -748,6 +783,21 @@ plot_clusgap(gs)
 ```
 
 
+##Ordination Plots
+```{r}
+Ordination<- ordinate(PS1, method = "NMDS", distance = "bray", formula = NULL)
+
+```
+
+##Taxa Prevalence
+```{r}
+prevdt = melt[, list(Prevalence = sum(count > 0), 
+                    TotalCounts = sum(count)),
+             by = "Rank6"]
+ggplot(prevdt, aes(Prevalence)) + 
+  geom_histogram() + 
+  ggtitle("Histogram of Taxa Prevalence")
+```
 
 
 ##Bivariate Analysis
