@@ -681,6 +681,14 @@ ggplot(melt, aes(x=ExFreq,
 #Look at tree to visualize taxa breakdown in subset
 plot_tree(pss, color = "ExFreq", label.tips = "Rank6")
 
+#Radial Tree
+plot_tree(pss, color = "ExFreq", ladderize = "left") + coord_polar(theta = "y")
+
+# Make radial tree more elaborate
+
+plot_tree(pss, nodelabf = nodeplotboot(60, 60, 3), color = "ExFreq", shape = "Rank6", size="abundance", base.spacing = 0.03, min.abundance = 100, ladderize = "left") + coord_polar(theta = "y")
+#cool plot but illegible, most likely due to number of subjects.... Learning to work with making plots with so many data points would be a valuable lesson for working with this size dataframe. 
+
 
 # Eliminate samples whose total reads are less than 20
 
@@ -692,6 +700,8 @@ plot_tree(GP.ch1)
 # Merge first 5 OTUSs in Chlamydiae-only dataset
 
 GP.ch1.merged <- merge_taxa(GP.ch1, taxa_names(GP.ch1)[1:5])
+
+
 ```
 
 ```{r}
