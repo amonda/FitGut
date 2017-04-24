@@ -637,6 +637,8 @@ title="Bar Plot", facet_grid=NULL)
 
 #Colors didn't work on the bars or in heatmap and I can't figure out why?
 ```
+
+I am going to do a few more visualizations just to see if the colors will fill properly using other types of plots and also to begin visualizing the data to gain a better understanding of what I am working with. 
 ```{r}
 #melt ps object in order to create a heatmap to look at inital data
 melt <- psmelt(ps)
@@ -685,11 +687,64 @@ gpsf <- filter_taxa(PS, function(x) sd(x) / mean(x) > 3.0, TRUE)
 
 ```
 
+##Gap Statistics
 
 ```{r}
-#Look at available distance methods
-dist_methods <- unlist(distanceMethodList)
-print(dist_methods)
+library(cluster)
+#First ordination
+exord <- ordinate(pss, method = "MDS", distance = "jsd")
+
+
+```
+
+```{r}
+# Compute gap statistic
+
+paml = function(x, k){list(cluster=pam(x,k, cluster.only = TRUE))}
+x = phyloseq:::scores.pcoa(exord, distplay="sites")
+gskmn = clusGap(x[,1:2], FUN=paml, K.max = 6, B=50)
+gskmn
+```
+
+Plot the results. 
+```{r}
+# Define plot method
+
+plot_glusgap <- function(clusgap, title="Gap Statistic calculation results"){
+  require("ggplot2")
+  gstab <- data.frame(clusgap$Tab, k=1:nrow(clusgap$Tab))
+  p <- ggplot(gstab, aes(k, gap)) + geom_line() + geom_point(size=5)
+  p <- p + geom_errorbar(aes(ymax = gap+SE.sim, ymin = gap - SE.sim))
+  p <- p + ggtitle(title)
+  return(p)
+}
+
+# Define a wrapper function
+
+gap_statistic_ordination <- function(ord, FUNcluster, type="sites", K.max=6, axes=c(1:2), B=500, verbose=interactive(), ...){
+    require("cluster")
+    #   If "paml" was chosen, use this internally defined call to pam
+    if(FUNcluster == "paml"){
+        FUNcluster = function(x,k) list(cluster = pam(x, k, cluster.only=TRUE))     
+    }
+    # Use the scores function to get the ordination coordinates
+    x = phyloseq:::scores.pcoa(ord, display=type)
+    #   If axes not explicitly defined (NULL), then use all of them
+    if(is.null(axes)){axes = 1:ncol(x)}
+    #   Finally, perform, and return, the gap statistic calculation using cluster::clusGap  
+    clusGap(x[, axes], FUN=FUNcluster, K.max=K.max, B=B, verbose=verbose, ...)
+}
+
+```
+
+
+```{r}
+# Make the plot
+
+gs <- gap_statistic_ordination(exord, "paml", B=50, verbose = FALSE)
+print(gs, method="Tibs2001SEmax")
+plot_clusgap(gs)
+
 ```
 
 
