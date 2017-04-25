@@ -32,7 +32,8 @@ library(ReporteRs)
 library(magrittr)
 library(plyr)
 library(RColorBrewer)
-
+library(DESeq2)
+library(edgeR)
 
 #If error in phyloseq load visit this page <https://joey711.github.io/phyloseq/install.html>
 ```
@@ -808,6 +809,41 @@ ggplot(prevdt, aes(Prevalence)) +
   geom_histogram() + 
   ggtitle("Histogram of Taxa Prevalence")
 ```
+
+```{r}
+gm_mean = function(x, na.rm=TRUE){  exp(sum(log(x[x > 0]), na.rm=na.rm) / length(x))}
+diagddsraw = phyloseq_to_deseq2(PS, ~ ExFreq)
+geoMeans = apply(counts(diagddsraw), 1, gm_mean)
+diagdds = estimateSizeFactors(diagddsraw, controlGenes=1:200)
+diagdds2 = DESeq(diagdds, fitType="local")
+norm<-as.matrix(counts(diagdds2, normalized=TRUE))
+
+
+
+
+
+diagdds = phyloseq_to_deseq2(PS,~ ExFreq)
+
+#Estimate Size Factors
+counts<-counts(diagdds)
+gm_mean = function(x, na.rm=TRUE){  exp(sum(log(x[x > 0]), na.rm=na.rm) / length(x))}
+geoMeans = apply(counts, 1, function(row) if (all(row == 0)) 0 else exp(mean(log(row[row != 0]))))
+ddsLove<-estimateSizeFactors(diagdds, gm_mean=gm_mean)
+estimatesizefactors<-as.matrix(counts(ddsLove, normalized=TRUE)) 
+
+#2. Estimate Dispersions
+ddsLovedis<-estimateDispersions(ddsLove)
+estimatedispersions<-as.data.frame(counts(ddsLovedis, normalized=TRUE))
+
+ts = counts(diagdds)
+geoMeans = apply(ts, 1, function(row) if (all(row == 0)) 0 else exp(mean(log(row[row != 0]))))
+diagdds<-na.omit(diagdds)
+diagdds = estimateSizeFactors(diagdds)
+counts(diagdds, normalized=TRUE)
+
+diagdds = DESeq(diagdds, test="Wald", fitType="parametric")
+```
+
 
 
 ##Bivariate Analysis
