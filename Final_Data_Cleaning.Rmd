@@ -810,17 +810,14 @@ ggplot(prevdt, aes(Prevalence)) +
   ggtitle("Histogram of Taxa Prevalence")
 ```
 
-```{r}
+```{r, eval=FALSE, include=FALSE}
+###Deseq conversion does not work. Problems with 0 in OTU or NA depending on the commands used to try to fix the problems. 
 gm_mean = function(x, na.rm=TRUE){  exp(sum(log(x[x > 0]), na.rm=na.rm) / length(x))}
 diagddsraw = phyloseq_to_deseq2(PS, ~ ExFreq)
 geoMeans = apply(counts(diagddsraw), 1, gm_mean)
 diagdds = estimateSizeFactors(diagddsraw, controlGenes=1:200)
 diagdds2 = DESeq(diagdds, fitType="local")
 norm<-as.matrix(counts(diagdds2, normalized=TRUE))
-
-
-
-
 
 diagdds = phyloseq_to_deseq2(PS,~ ExFreq)
 
@@ -847,6 +844,11 @@ diagdds = DESeq(diagdds, test="Wald", fitType="parametric")
 
 
 ##Bivariate Analysis
+
+```{r}
+
+```
+
 ```{r}
 #Look for multicolinearity 
 
